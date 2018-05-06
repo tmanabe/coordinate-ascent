@@ -14,7 +14,7 @@ params['y'] = 23.0
 params['z'] = 456.0  # Arbitrary initial values
 
 def e(ps):
-    if ps['z'] <= -50.0:
+    if ps['z'] < -50.0:
         return None  # For invalid parameter values
     return -((ps['x'] + 1) ** 2 + (ps['y'] + 10) ** 2 + (ps['z'] + 100) ** 2)
 

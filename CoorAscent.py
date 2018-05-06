@@ -19,6 +19,7 @@ class CoorAscent(object):
         if validate is not None:
             assert 'function' == validate.__class__.__name__
         self.validate = validate
+
         self.nRestart = nRestart
         self.nMaxIteration = nMaxIteration
         self.stepBase = stepBase
@@ -26,17 +27,18 @@ class CoorAscent(object):
         self.tolerance = tolerance
 
     def learn(self, params):
-        regularParams = params.copy()
-        globalBestParams, globalBestScore = regularParams, self.evaluate(regularParams)
-        assert globalBestScore is not None
+        keys = list(params.keys())
+        regularParams, globalStartScore = params.copy(), self.evaluate(params)
+        assert globalStartScore is not None
+        globalBestParams, globalBestScore = regularParams.copy(), globalStartScore
 
         for _ in range(self.nRestart):
             consecutiveFails = 0
-            params, startScore = regularParams.copy(), self.evaluate(params)
-            bestParams, bestScore = params.copy(), startScore
+            params = regularParams.copy()
+            bestParams, bestScore = regularParams.copy(), globalStartScore
 
-            while consecutiveFails < len(params):
-                keys = list(params.keys())
+            while consecutiveFails < len(keys):
+                startScore = bestScore
                 shuffle(keys)
 
                 for currentKey in keys:
@@ -46,11 +48,11 @@ class CoorAscent(object):
                         step = 0.001 * direction
                         if 0.0 != originalValue and abs(originalValue) < 2 * abs(step):
                             step = self.stepBase * abs(originalValue)
-                        totalStep, numIter = step, self.nMaxIteration
+                        totalStep, nIteration = step, self.nMaxIteration
                         if 0 == direction:
-                            totalStep, numIter = -originalValue, 1
+                            totalStep, nIteration = -originalValue, 1
 
-                        for j in range(numIter):
+                        for _ in range(nIteration):
                             params[currentKey] = originalValue + totalStep
                             score = self.evaluate(params)
                             if score is not None and bestScore < score:
@@ -60,8 +62,6 @@ class CoorAscent(object):
 
                         if succeeds:
                             break
-                        elif 0 == direction:
-                            params[currentKey] = originalValue
 
                     if succeeds:
                         consecutiveFails = 0
@@ -84,7 +84,7 @@ class CoorAscent(object):
 
 if __name__ == '__main__':
     def e(ps):
-        if ps['z'] <= -50.0:
+        if ps['z'] < -50.0:
             return None
         return -((ps['x'] + 1) ** 2 + (ps['y'] + 10) ** 2 + (ps['z'] + 100) ** 2)
 
