@@ -8,7 +8,7 @@ class Params(dict):
 class CoorAscent(object):
     def __init__(self,
                  evaluate,
-                 validate = None,
+                 validate=None,
                  nRestart=5,
                  nMaxIteration=25,
                  stepBase=0.05,
@@ -26,76 +26,71 @@ class CoorAscent(object):
         self.tolerance = tolerance
 
     def learn(self, params):
-        regParams = params.copy()
-        globalBestParams, globalBestScore = regParams, self.evaluate(regParams)
+        regularParams = params.copy()
+        globalBestParams, globalBestScore = regularParams, self.evaluate(regularParams)
         assert globalBestScore is not None
-        signs = [1, -1, 0]
 
-        for r in range(self.nRestart):
-            consecutive_fails = 0
-            params, startScore = regParams.copy(), self.evaluate(params)
-            current_feature = -1
+        for _ in range(self.nRestart):
+            consecutiveFails = 0
+            params, startScore = regularParams.copy(), self.evaluate(params)
             bestParams, bestScore = params.copy(), startScore
-            while(1 < len(params) and consecutive_fails < len(params) - 1 or
-                  1 == len(params) and 0 == consecutive_fails):
-                fids = list(params.keys())
-                shuffle(fids)
-                for current_feature in fids:
-                    origParam = params[current_feature]
-                    totalStep, bestTotalStep = 0.0, 0.0
-                    succeeds = False
-                    for dir in signs:
-                        step = 0.001 * dir
-                        if 0.0 != origParam and 0.5 * abs(origParam) < abs(step):
-                            step = self.stepBase * abs(origWeight)
-                        totalStep = step
-                        self.numIter = self.nMaxIteration
-                        if 0 == dir:
-                            numIter = 1
-                            totalStep = -origParam
-                        for j in range(self.numIter):
-                            w = origParam + totalStep
-                            param_change = step
-                            params[current_feature] = w
+
+            while consecutiveFails < len(params):
+                keys = list(params.keys())
+                shuffle(keys)
+
+                for currentKey in keys:
+                    originalValue, bestTotalStep, succeeds = params[currentKey], 0.0, False
+
+                    for direction in [1, -1, 0]:
+                        step = 0.001 * direction
+                        if 0.0 != originalValue and abs(originalValue) < 2 * abs(step):
+                            step = self.stepBase * abs(originalValue)
+                        totalStep, numIter = step, self.nMaxIteration
+                        if 0 == direction:
+                            totalStep, numIter = -originalValue, 1
+
+                        for j in range(numIter):
+                            params[currentKey] = originalValue + totalStep
                             score = self.evaluate(params)
                             if score is not None and bestScore < score:
-                                bestScore = score
-                                bestTotalStep = totalStep
-                                succeeds = True
-                            if j < self.nMaxIteration - 1:
-                                step *= self.stepScale
-                                totalStep += step
-                        if(succeeds):
+                                bestScore, bestTotalStep, succeeds = score, totalStep, True
+                            step *= self.stepScale
+                            totalStep += step
+
+                        if succeeds:
                             break
-                        elif(signs[-1] == dir):
-                            weight_change = -totalStep
-                            params[current_feature] = origParam
+                        elif 0 == direction:
+                            params[currentKey] = originalValue
+
                     if succeeds:
-                        consecutive_fails = 0
-                        param_change = bestTotalStep - totalStep
-                        params[current_feature] = origParam + bestTotalStep
+                        consecutiveFails = 0
+                        params[currentKey] = originalValue + bestTotalStep
                         bestParams = params.copy()
                     else:
-                        consecutive_fails += 1
-                        param_change = -totalStep
-                        params[current_feature] = origParam
+                        consecutiveFails += 1
+                        params[currentKey] = originalValue
+
                 if (bestScore - startScore < self.tolerance):
                     break
+
             if self.validate is not None:
-                current_feature = -1
                 bestScore = self.validate(bestParams)
             if globalBestScore < bestScore:
                 globalBestScore, globalBestParams = bestScore, bestParams.copy()
+
         return globalBestParams
 
 
 if __name__ == '__main__':
+    def e(ps):
+        if ps['z'] <= -50.0:
+            return None
+        return -((ps['x'] + 1) ** 2 + (ps['y'] + 10) ** 2 + (ps['z'] + 100) ** 2)
+
     params = Params()
     params['x'] = 1.0
-    params['y'] = 10.0
-    params['z'] = 100.0
+    params['y'] = 23.0
+    params['z'] = 456.0
 
-    e = lambda params: -((params['x'] + 1) ** 2 + (params['y'] + 10) ** 2 + (params['z'] + 100) ** 2)
-
-    ca = CoorAscent(e)
-    print(ca.learn(params))
+    print(CoorAscent(e).learn(params))
