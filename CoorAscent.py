@@ -1,10 +1,6 @@
 from random import shuffle
 
 
-class Params(dict):
-    pass
-
-
 class CoorAscent(object):
     def __init__(self,
                  evaluate,
@@ -83,14 +79,14 @@ class CoorAscent(object):
 
 
 if __name__ == '__main__':
-    def e(ps):
-        if ps['z'] < -50.0:
-            return None
-        return -((ps['x'] + 1) ** 2 + (ps['y'] + 10) ** 2 + (ps['z'] + 100) ** 2)
+    from CoorAscent import CoorAscent
 
-    params = Params()
-    params['x'] = 1.0
-    params['y'] = 23.0
-    params['z'] = 456.0
+    def e(params):  # Objective function
+        # Minimize (x+1)^2 + (y+10)^2 + (z+100)^2 where -50 <= z
+        if not -50 <= params['z']:
+            return None  # For invalid parameter values
+        return -((params['x'] + 1) ** 2 + (params['y'] + 10) ** 2 + (params['z'] + 100) ** 2)
 
-    print(CoorAscent(e).learn(params))
+    params = {'x': 1.0, 'y': 23.0, 'z': 456.0}  # Arbitrary initial values
+
+    print(CoorAscent(e).learn(params))  # => {'x': -1.0, 'y': -10.0, 'z': -50.0}
